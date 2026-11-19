@@ -100,3 +100,21 @@ and retain the original fetch time after a failed refresh. Other supported
 items use the existing poe.ninja price database with a visible cache age.
 Refreshes share in-flight requests. Live trade results remain available for
 rare gear, private leagues, and custom roll or listing filters.
+
+## Configurable price refresh and portable ZIP
+
+Settings → Price Check now includes a refresh interval slider with stops at
+1, 3, 5, 10, 15, 30, 45 and 60 minutes. Existing profiles and new profiles
+default to 15 minutes. Save applies the interval to general and Viscera
+overviews. Checks run on use and while the price panel is open. Live listing
+searches remain manual in cached-first mode.
+
+Both price caches share pending requests per league, honor server max-age
+and Retry-After, and send If-None-Match when an ETag is available. A 304
+retains the rows and updates the checked time. An error retains the last
+successful data and backs off. A shorter interval can still return the
+same data.
+
+After the Windows launch test, CI creates a single ZIP containing the
+portable executable, extracts it, compares the executable's SHA-256 with
+the tested original, and uploads that ZIP directly.

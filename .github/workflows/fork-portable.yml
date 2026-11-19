@@ -46,8 +46,17 @@ jobs:
           } finally {
             if (!$process.HasExited) { taskkill /PID $process.Id /T /F }
           }
+      - name: Package and verify the downloadable ZIP
+        shell: pwsh
+        run: |
+          $exe = Get-Item main/dist/*.exe
+          $zip = "Phage-Cell-PoE-Trade-Windows-x64-$($env:GITHUB_SHA.Substring(0,8)).zip"
+          Compress-Archive -LiteralPath $exe.FullName -DestinationPath $zip
+          Expand-Archive -LiteralPath $zip -DestinationPath "$env:RUNNER_TEMP/zip-check"
+          $copy = Join-Path "$env:RUNNER_TEMP/zip-check" $exe.Name
+          if ((Get-FileHash $copy).Hash -ne (Get-FileHash $exe.FullName).Hash) { throw 'ZIP verification failed' }
       - uses: actions/upload-artifact@v7
         with:
-          name: phage-cell-portable-${{ github.sha }}
-          path: main/dist/*.exe
+          path: Phage-Cell-PoE-Trade-Windows-x64-*.zip
+          archive: false
           if-no-files-found: error

@@ -3,6 +3,10 @@ import { createGlobalState } from '@vueuse/core'
 import { Host } from '@/web/background/IPC'
 import { useLeagues } from './Leagues'
 
+import { overviewCache } from './overview-cache'
+import { AppConfig } from '@/web/Config'
+import type { PriceCheckWidget } from '@/web/overlay/interfaces'
+
 interface NinjaDenseInfo {
   chaos: number
   graph: Array<number | null>
@@ -11,10 +15,6 @@ interface NinjaDenseInfo {
 }
 
 type PriceDatabase = Array<{ ns: string, url: string, lines: string }>
-const RETRY_INTERVAL_MS = 4 * 60 * 1000
-const UPDATE_INTERVAL_MS = 31 * 60 * 1000
-const INTEREST_SPAN_MS = 20 * 60 * 1000
-
 interface DbQuery {
   ns: string
   name: string
@@ -35,52 +35,26 @@ export const usePoeninja = createGlobalState(() => {
   const isLoading = shallowRef(false)
   const prices = shallowRef<PriceDatabase>([])
   const lastUpdateTime = shallowRef(0)
-  let lastAttempt = 0
-  let downloadController: AbortController | undefined
-  let lastInterestTime = 0
+  const overview = overviewCache((league, headers) => Host.proxy(
+    `poe.ninja/poe1/api/economy/current/dense/overviews?league=${encodeURIComponent(league)}&language=en`, { headers }
+  ), async response => {
+    const rows = splitJsonBlob(await response.text())
+    if (!rows.length) throw new Error('Empty price overview')
+    return rows
+  })
 
-  async function load (force: boolean = false) {
+  async function queuePricesFetch () {
     const league = leagues.selected.value
-    if (!league || !league.isPopular || league.realm !== 'pc-ggg') return
-
-    if (!force && (downloadController || Date.now() - lastAttempt < RETRY_INTERVAL_MS ||
-      (Date.now() - lastUpdateTime.value) < UPDATE_INTERVAL_MS ||
-      (Date.now() - lastInterestTime) > INTEREST_SPAN_MS
-    )) return
-    if (downloadController) downloadController.abort()
-
-    const controller = new AbortController()
-    lastAttempt = Date.now()
-    try {
-      isLoading.value = true
-      downloadController = controller
-      const response = await Host.proxy(`poe.ninja/poe1/api/economy/current/dense/overviews?league=${encodeURIComponent(league.id)}&language=en`, {
-        signal: downloadController.signal
-      })
-      const jsonBlob = await response.text()
-
-      if (!response.ok || controller.signal.aborted) return
-      const loaded = splitJsonBlob(jsonBlob)
-      if (!loaded.length) return
-      prices.value = loaded
-      const divine = findPriceByQuery({ ns: 'ITEM', name: 'Divine Orb', variant: undefined })
-      if (divine && divine.chaos >= 30) {
-        xchgRate.value = divine.chaos
-      }
-      lastUpdateTime.value = Date.now()
-    } catch {
-      // Keep the previous estimate and its original fetch time when offline.
-    } finally {
-      if (downloadController === controller) {
-        downloadController = undefined
-        isLoading.value = false
-      }
-    }
-  }
-
-  function queuePricesFetch () {
-    lastInterestTime = Date.now()
-    load()
+    if (!league?.isPopular || league.realm !== 'pc-ggg') return
+    isLoading.value = true
+    const snapshot = await overview(league.id, AppConfig<PriceCheckWidget>('price-check')?.refreshMinutes)
+    if (league.id !== leagues.selected.value?.id || league.realm !== leagues.selected.value?.realm) return
+    isLoading.value = false
+    if (!snapshot) return
+    prices.value = snapshot.rows
+    lastUpdateTime.value = snapshot.fetchedAt
+    const divine = findPriceByQuery({ ns: 'ITEM', name: 'Divine Orb', variant: undefined })
+    xchgRate.value = divine && divine.chaos >= 30 ? divine.chaos : undefined
   }
 
   function selectedLeagueToUrl (): string {
@@ -144,18 +118,12 @@ export const usePoeninja = createGlobalState(() => {
     return count / (xchgRate.value || 9999)
   }
 
-  setInterval(() => {
-    load()
-  }, RETRY_INTERVAL_MS)
-
   watch([leagues.selectedId, () => leagues.selected.value?.realm], () => {
-    downloadController?.abort()
     lastUpdateTime.value = 0
-    lastAttempt = 0
+    isLoading.value = false
     xchgRate.value = undefined
     prices.value = []
-    load(true)
-  })
+  }, { flush: 'sync' })
 
   return {
     fetchedAt: readonly(lastUpdateTime),

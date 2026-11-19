@@ -11,7 +11,7 @@
           <span class="text-gray-400">{{ t(':base_item') }}</span>
         </template>
       </item-quick-price>
-      <div class="text-xs text-gray-400">poe.ninja estimate · fetched {{ age }} min ago</div>
+      <div class="text-xs text-gray-400">poe.ninja estimate · checked {{ age }} min ago</div>
     </div>
     <div v-if="trend.change" @click="openNinja" :class="$style['trend-btn']">
       <div class="text-center">

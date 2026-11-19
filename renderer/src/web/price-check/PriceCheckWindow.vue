@@ -76,6 +76,7 @@ import CheckedItem from './CheckedItem.vue'
 import BackgroundInfo from './BackgroundInfo.vue'
 import { MainProcess, Host } from '@/web/background/IPC'
 import { usePoeninja } from '../background/Prices'
+import { useIntervalFn } from '@vueuse/core'
 import { useLeagues } from '@/web/background/Leagues'
 import { AppConfig } from '@/web/Config'
 import { ItemCategory, ItemRarity, parseClipboard, ParsedItem } from '@/parser'
@@ -212,6 +213,11 @@ export default defineComponent({
     })
 
     const leagues = useLeagues()
+    function refreshVisiblePrices () {
+      if (props.config.wmWants !== 'hide' && item.value?.isOk()) queuePricesFetch()
+    }
+    useIntervalFn(refreshVisiblePrices, 60_000)
+    watch([leagues.selectedId, () => props.config.refreshMinutes, () => props.config.wmWants], refreshVisiblePrices)
     const title = computed(() => leagues.selectedId.value || 'Awakened PoE Trade')
     const stableOrbCost = computed(() => (xchgRate.value) ? Math.round(xchgRate.value) : null)
     const isBrowserShown = computed(() => props.config.wmFlags.includes('has-browser'))

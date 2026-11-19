@@ -9,7 +9,7 @@ globalThis.fetch = async url => new Response(await readFile(new URL(url)))
 const bundle = await build({
   absWorkingDir: fileURLToPath(root),
   stdin: {
-    contents: "export { visceraEstimate, overviewCache } from './src/web/price-check/trends/viscera-estimate'; export { priceCheckHotkeys } from './src/web/settings/price-check-hotkeys'; export { parseClipboard } from './src/parser/Parser'; export { loadForLang } from './src/assets/data'; export { createFilters } from './src/web/price-check/filters/create-item-filters'; export { createTradeRequest } from './src/web/price-check/trade/pathofexile-trade'",
+    contents: "export { overviewCache, priceInterval, refreshMinutes } from './src/web/background/overview-cache'; export { visceraEstimate } from './src/web/price-check/trends/viscera-estimate'; export { priceCheckHotkeys } from './src/web/settings/price-check-hotkeys'; export { parseClipboard } from './src/parser/Parser'; export { loadForLang } from './src/assets/data'; export { createFilters } from './src/web/price-check/filters/create-item-filters'; export { createTradeRequest } from './src/web/price-check/trade/pathofexile-trade'",
     resolveDir: fileURLToPath(root)
   },
   bundle: true, platform: 'node', format: 'esm', write: false,
@@ -25,7 +25,7 @@ const bundle = await build({
   }],
   define: { 'import.meta.env.BASE_URL': JSON.stringify(publicURL.href) }
 })
-const { visceraEstimate, overviewCache, priceCheckHotkeys, parseClipboard, loadForLang, createFilters, createTradeRequest } = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].contents).toString('base64'))
+const { visceraEstimate, overviewCache, priceInterval, refreshMinutes, priceCheckHotkeys, parseClipboard, loadForLang, createFilters, createTradeRequest } = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].contents).toString('base64'))
 await loadForLang('en')
 const help = 'Take this to the Wickerman in a town or hideout to attach it.'
 function clipboard (name, slot) {
@@ -102,8 +102,8 @@ let offline = false
 const cached = overviewCache(async () => {
   calls++
   if (offline) throw Error('offline')
-  return [row]
-}, () => time)
+  return Response.json([row])
+}, r => r.json(), () => time)
 const [first, same] = await Promise.all([cached('Covens'), cached('Covens')])
 assert.equal(calls, 1)
 assert.equal(first, same)
@@ -124,3 +124,51 @@ keys[1].config.value = 'F7'
 assert.equal(config.hotkey, 'F')
 assert.equal(config.hotkeyLocked, 'F7')
 console.log('Passed tier and variant matching, cache reuse, league isolation, retry and hotkey settings.')
+
+assert.deepEqual(refreshMinutes, [1, 3, 5, 10, 15, 30, 45, 60])
+assert.equal(priceInterval(), 15)
+assert.equal(priceInterval(7), 15)
+for (const minutes of refreshMinutes) {
+  let clock = 0
+  let requests = 0
+  const cache = overviewCache(async () => {
+    requests++
+    return Response.json([row])
+  }, r => r.json(), () => clock)
+  await cache('Covens', minutes)
+  clock = minutes * 60_000 - 1
+  await cache('Covens', minutes)
+  assert.equal(requests, 1)
+  clock++
+  await cache('Covens', minutes)
+  assert.equal(requests, 2)
+}
+
+let clock = 0
+const validators = []
+const responses = [
+  Response.json([row], { headers: { ETag: '"snapshot"', 'Cache-Control': 'public, max-age=300' } }),
+  new Response(null, { status: 304 }),
+  new Response(null, { status: 429, headers: { 'Retry-After': '600' } }),
+  Response.json([])
+]
+const revalidate = overviewCache(async (_league, headers) => {
+  validators.push(headers['If-None-Match'])
+  return responses.shift()
+}, r => r.json(), () => clock)
+const original = await revalidate('Covens', 60)
+clock = 60_000
+await revalidate('Covens', 1)
+assert.equal(validators.length, 1)
+clock = 300_000
+const fresh = await revalidate('Covens', 1)
+assert.equal(fresh.rows, original.rows)
+assert.equal(fresh.fetchedAt, clock)
+clock += 300_000
+assert.equal(await revalidate('Covens', 1), fresh)
+clock += 599_999
+assert.equal(await revalidate('Covens', 1), fresh)
+clock++
+assert.deepEqual((await revalidate('Covens', 1)).rows, [])
+assert.deepEqual(validators, [undefined, '"snapshot"', '"snapshot"', '"snapshot"'])
+console.log('Passed all eight refresh intervals, default migration, server cache lifetime, ETag/304 and Retry-After.')

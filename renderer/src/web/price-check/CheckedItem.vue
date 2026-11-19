@@ -4,7 +4,7 @@
       :filters="itemFilters"
       :item="item" />
     <viscera-estimate v-if="item.info.refName === 'Viscera'"
-      :item="item" :league="estimateLeague" />
+      :item="item" :league="estimateLeague" :interval="widget.refreshMinutes" />
     <price-prediction v-else-if="showPredictedPrice" class="mb-4"
       :item="item" />
     <price-trend v-else
@@ -245,8 +245,9 @@ export default defineComponent({
       t,
       itemFilters,
       itemStats,
+      widget,
       cachedFirst,
-      estimateLeague: computed(() => leagues.selected.value?.realm === 'pc-ggg' && leagues.selected.value.isPopular ? leagues.selected.value.id : undefined),
+      estimateLeague: computed(() => widget.value.wmWants !== 'hide' && leagues.selected.value?.realm === 'pc-ggg' && leagues.selected.value.isPopular ? leagues.selected.value.id : undefined),
       doSearch,
       tradeAPI,
       tradeService,

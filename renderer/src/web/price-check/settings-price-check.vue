@@ -2,6 +2,12 @@
   <div class="max-w-md p-2">
     <hotkeys-generic class="mb-3" :hotkeys="priceHotkeys" />
     <ui-checkbox class="mb-4" v-model="cachedFirst">Show cached estimates first and search live listings on demand</ui-checkbox>
+    <label class="block mb-4">
+      Price cache refresh interval · {{ refreshMinutes[intervalIndex] === 60 ? '1 hour' : refreshMinutes[intervalIndex] + ' min' }}
+      <input type="range" class="block w-full" min="0" :max="refreshMinutes.length - 1"
+        step="1" v-model.number="intervalIndex" :aria-valuetext="refreshMinutes[intervalIndex] + ' minutes'">
+      <span class="text-xs text-gray-400">While checking items. Server cache and retry limits apply.</span>
+    </label>
     <div class="mb-2" v-if="!leagues.error.value">
       <div class="flex-1 mb-1">{{ t('league') }}
         <button class="btn" @click="leagues.load()" :disabled="leagues.isLoading.value">{{ t('Refresh') }}</button>
@@ -106,6 +112,7 @@ import UiToggle from '@/web/ui/UiToggle.vue'
 import UiErrorBox from '@/web/ui/UiErrorBox.vue'
 import HotkeysGeneric from '../settings/HotkeysGeneric.vue'
 import { priceCheckHotkeys } from '../settings/price-check-hotkeys'
+import { refreshMinutes, priceInterval } from '../background/overview-cache'
 import OnlineFilterCore from './trade/OnlineFilterCore.vue'
 import { ItemFilters } from './filters/interfaces.js'
 import { configModelValue, configProp, findWidget } from '../settings/utils.js'
@@ -125,6 +132,11 @@ export default defineComponent({
     return {
       t,
       priceHotkeys: computed(() => [priceCheckHotkeys(configWidget.value)]),
+      refreshMinutes,
+      intervalIndex: computed({
+        get: () => refreshMinutes.indexOf(priceInterval(configWidget.value.refreshMinutes)),
+        set: (index: number) => { configWidget.value.refreshMinutes = refreshMinutes[index] }
+      }),
       cachedFirst: computed({ get: () => configWidget.value.cachedFirst !== false, set: (v: boolean) => { configWidget.value.cachedFirst = v } }),
       leagueId: configModelValue(() => props.config, 'leagueId'),
       customLeagueId: computed<string>({
