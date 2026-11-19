@@ -76,3 +76,10 @@ item families and localized stat coverage require further verification.
   no listing. Neither property is inferred from an ordinary unidentified
   clipboard. Other tier-specific and fated searches remain open.
 - Fork configuration and Electron profile use the phage-cell-poe-trade directory under the OS app-data root, selected before the single-instance lock.
+
+- Retained public listing clipboard fixtures for all four body slots.
+  Removed seller notes. Live searches returned examples for Al-Hezmin's
+  Head, Smuggler's Hand and Golemic Stone in addition to the hoof.
+- The Windows workflow now starts the actual portable artifact, waits for
+  the packaged application's loopback API, checks its reported version
+  and checks the dedicated profile before uploading.

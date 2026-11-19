@@ -27,6 +27,25 @@ jobs:
         working-directory: main
       - run: npm exec -- electron-builder --win portable --x64 --publish never
         working-directory: main
+      - name: Launch the portable executable and verify its local API
+        shell: pwsh
+        run: |
+          $exe = Get-Item main/dist/*.exe
+          $expected = (Get-Content main/package.json -Raw | ConvertFrom-Json).version
+          $process = Start-Process $exe.FullName '--listen=127.0.0.1:38764' -PassThru
+          try {
+            $deadline = (Get-Date).AddSeconds(90)
+            do {
+              Start-Sleep -Seconds 2
+              if ($process.HasExited) { throw "Portable exited with code $($process.ExitCode)" }
+              try { $config = Invoke-RestMethod http://127.0.0.1:38764/config -TimeoutSec 2 }
+              catch { $config = $null }
+            } until ($config -or (Get-Date) -ge $deadline)
+            if ($config.version -ne $expected) { throw "Expected version $expected from the packaged app" }
+            if (!(Test-Path "$env:APPDATA/phage-cell-poe-trade")) { throw "Missing fork profile" }
+          } finally {
+            if (!$process.HasExited) { taskkill /PID $process.Id /T /F }
+          }
       - uses: actions/upload-artifact@v7
         with:
           name: phage-cell-portable-${{ github.sha }}

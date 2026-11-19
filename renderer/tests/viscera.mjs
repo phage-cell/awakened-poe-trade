@@ -74,3 +74,19 @@ assert.equal(hoof.value.visceraTradeType, 'Flaming Goat Hoof')
 const fire = hoof.value.newMods.flatMap(mod => mod.stats).find(s => s.stat.trade.ids.implicit?.includes('implicit.stat_3962278098'))
 assert.equal(fire?.roll.value, 12)
 console.log('Passed public trade clipboard with a verified implicit and roll.')
+
+for (const [slot, type, id] of [
+  ['head', "Al-Hezmin's Head", 'implicit.stat_3931566161'],
+  ['arm', "Smuggler's Hand", 'implicit.stat_253956903'],
+  ['body', 'Golemic Stone', 'implicit.stat_4262448838']
+]) {
+  const raw = await readFile(new URL('fixtures/' + slot + '.txt', import.meta.url), 'utf8')
+  const parsed = parseClipboard(raw)
+  assert.ok(parsed.isOk())
+  const item = parsed.value
+  const { query } = createTradeRequest(createFilters(item, { league: 'Covens', exact: true, useEn: true }), [])
+  assert.equal(query.type, type)
+  assert.equal(query.filters.type_filters.filters.category.option, 'viscera.' + slot)
+  assert.ok(item.newMods.some(mod => mod.stats.some(s => s.stat.trade.ids.implicit?.includes(id))))
+}
+console.log('Passed additional live head, arm and torso clipboard fixtures.')

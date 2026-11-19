@@ -1,0 +1,10 @@
+Item Class: Viscera
+Smuggler's Hand
+--------
+Upper Limb
+--------
+Item Level: 77
+--------
+9% increased Quantity of Gold Dropped by Slain Enemies
+--------
+Take this to the Wickerman in a town or hideout to attach it.

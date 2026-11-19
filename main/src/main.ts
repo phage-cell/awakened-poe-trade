@@ -3,6 +3,7 @@
 import { app } from 'electron'
 import { uIOhook } from 'uiohook-napi'
 import os from 'node:os'
+import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 import { startServer, eventPipe, server } from './server'
 import { Logger } from './RemoteLogger'
@@ -16,7 +17,9 @@ import { OverlayVisibility } from './windowing/OverlayVisibility'
 import { GameLogWatcher } from './host-files/GameLogWatcher'
 import { HttpProxy } from './proxy'
 
-app.setPath('userData', path.join(app.getPath('appData'), 'phage-cell-poe-trade'))
+const profilePath = path.join(app.getPath('appData'), 'phage-cell-poe-trade')
+mkdirSync(profilePath, { recursive: true })
+app.setPath('userData', profilePath)
 
 if (!app.requestSingleInstanceLock()) {
   app.exit()

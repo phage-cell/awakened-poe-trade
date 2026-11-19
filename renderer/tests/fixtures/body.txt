@@ -1,0 +1,10 @@
+Item Class: Viscera
+Lesser Golemic Stone
+--------
+Torso
+--------
+Item Level: 14
+--------
+14% chance to Avoid being Stunned
+--------
+Take this to the Wickerman in a town or hideout to attach it.
