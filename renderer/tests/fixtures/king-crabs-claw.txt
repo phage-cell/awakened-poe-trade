@@ -1,0 +1,11 @@
+Item Class: Viscera
+King Crab's Claw
+--------
+Upper Limb
+--------
+Item Level: 83
+--------
+Gain 4% of Physical Damage as Extra Cold Damage
+Gain 5% of Physical Damage as Extra Lightning Damage
+--------
+Take this to the Wickerman in a town or hideout to attach it.

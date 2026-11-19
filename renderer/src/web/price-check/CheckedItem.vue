@@ -3,6 +3,7 @@
     <filter-name
       :filters="itemFilters"
       :item="item" />
+    <exact-viscera v-if="item.info.refName === 'Viscera'" :item="item" :filters="itemFilters" :interval="widget.refreshMinutes" />
     <viscera-estimate v-if="item.info.refName === 'Viscera'"
       :item="item" :league="estimateLeague" :interval="widget.refreshMinutes" />
     <price-prediction v-else-if="showPredictedPrice" class="mb-4"
@@ -62,6 +63,7 @@ import TradeListing from './trade/TradeListing.vue'
 import TradeBulk from './trade/TradeBulk.vue'
 import TradeLinks from './trade/TradeLinks.vue'
 import { apiToSatisfySearch, getTradeEndpoint } from './trade/common'
+import ExactViscera from './trends/ExactViscera.vue'
 import VisceraEstimate from './trends/VisceraEstimate.vue'
 import PriceTrend from './trends/PriceTrend.vue'
 import FiltersBlock from './filters/FiltersBlock.vue'
@@ -87,6 +89,7 @@ export default defineComponent({
     TradeLinks,
     PriceTrend,
     VisceraEstimate,
+    ExactViscera,
     FiltersBlock,
     FilterName,
     StackValue,

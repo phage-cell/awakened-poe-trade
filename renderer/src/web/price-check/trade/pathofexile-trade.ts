@@ -224,6 +224,7 @@ export interface SearchResult {
 interface FetchResult {
   id: string
   item: {
+    extended?: { text?: string }
     ilvl?: number
     stackSize?: number
     corrupted?: boolean
@@ -250,6 +251,7 @@ interface FetchResult {
 }
 
 export interface PricingResult {
+  clipboard?: string
   id: string
   itemLevel?: string
   stackSize?: number
@@ -775,8 +777,8 @@ export function createTradeRequest (filters: ItemFilters, stats: FilterOrGroup[]
 
 const cache = new Cache()
 
-export async function requestTradeResultList (body: TradeRequest, leagueId: string): Promise<SearchResult> {
-  let data = cache.get<SearchResult>([body, leagueId])
+export async function requestTradeResultList (body: TradeRequest, leagueId: string, fresh = false): Promise<SearchResult> {
+  let data = fresh ? undefined : cache.get<SearchResult>([body, leagueId])
 
   if (!data) {
     preventQueueCreation([
@@ -812,9 +814,9 @@ export async function requestTradeResultList (body: TradeRequest, leagueId: stri
 export async function requestResults (
   queryId: string,
   resultIds: string[],
-  opts: { accountName: string }
+  opts: { accountName: string, fresh?: boolean }
 ): Promise<PricingResult[]> {
-  let data = cache.get<FetchResult[]>(resultIds)
+  let data = opts.fresh ? undefined : cache.get<FetchResult[]>(resultIds)
 
   if (!data) {
     await RateLimiter.waitMulti(RATE_LIMIT_RULES.FETCH)
@@ -835,6 +837,7 @@ export async function requestResults (
   return data.map<PricingResult>(result => {
     return {
       id: result.id,
+      clipboard: result.item.extended?.text,
       itemLevel: result.item.properties?.find(prop => prop.type === 78)?.values[0][0] ?? String(result.item.ilvl),
       stackSize: result.item.stackSize,
       corrupted: result.item.corrupted,

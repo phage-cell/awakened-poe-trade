@@ -9,7 +9,7 @@ globalThis.fetch = async url => new Response(await readFile(new URL(url)))
 const bundle = await build({
   absWorkingDir: fileURLToPath(root),
   stdin: {
-    contents: "export { overviewCache, priceInterval, refreshMinutes } from './src/web/background/overview-cache'; export { visceraEstimate } from './src/web/price-check/trends/viscera-estimate'; export { priceCheckHotkeys } from './src/web/settings/price-check-hotkeys'; export { parseClipboard } from './src/parser/Parser'; export { loadForLang } from './src/assets/data'; export { createFilters } from './src/web/price-check/filters/create-item-filters'; export { createTradeRequest } from './src/web/price-check/trade/pathofexile-trade'",
+    contents: "export { exactLookup, summarizeExact } from './src/web/price-check/trade/exact-viscera'; export { overviewCache, priceInterval, refreshMinutes } from './src/web/background/overview-cache'; export { visceraEstimate } from './src/web/price-check/trends/viscera-estimate'; export { priceCheckHotkeys } from './src/web/settings/price-check-hotkeys'; export { parseClipboard } from './src/parser/Parser'; export { loadForLang } from './src/assets/data'; export { createFilters } from './src/web/price-check/filters/create-item-filters'; export { createTradeRequest } from './src/web/price-check/trade/pathofexile-trade'",
     resolveDir: fileURLToPath(root)
   },
   bundle: true, platform: 'node', format: 'esm', write: false,
@@ -25,7 +25,7 @@ const bundle = await build({
   }],
   define: { 'import.meta.env.BASE_URL': JSON.stringify(publicURL.href) }
 })
-const { visceraEstimate, overviewCache, priceInterval, refreshMinutes, priceCheckHotkeys, parseClipboard, loadForLang, createFilters, createTradeRequest } = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].contents).toString('base64'))
+const { exactLookup, summarizeExact, visceraEstimate, overviewCache, priceInterval, refreshMinutes, priceCheckHotkeys, parseClipboard, loadForLang, createFilters, createTradeRequest } = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].contents).toString('base64'))
 await loadForLang('en')
 const help = 'Take this to the Wickerman in a town or hideout to attach it.'
 function clipboard (name, slot) {
@@ -172,3 +172,27 @@ clock++
 assert.deepEqual((await revalidate('Covens', 1)).rows, [])
 assert.deepEqual(validators, [undefined, '"snapshot"', '"snapshot"', '"snapshot"'])
 console.log('Passed all eight refresh intervals, default migration, server cache lifetime, ETag/304 and Retry-After.')
+
+const rawClaw = await readFile(new URL('fixtures/king-crabs-claw.txt', import.meta.url), 'utf8')
+const makeClaw = raw => parseClipboard(raw)._unsafeUnwrap()
+const exactClaw = makeClaw(rawClaw)
+const clawOptions = { league: 'Covens', exact: true, merchantOnly: true, useEn: true }
+const exactFilters = createFilters(exactClaw, clawOptions)
+const lookup = (item, filters = exactFilters) => exactLookup(item, filters, 'www.pathofexile.com', 'pc-ggg')
+const fourFive = lookup(exactClaw)
+assert.deepEqual(fourFive.body.query.stats[0].filters, [
+  { id: 'implicit.stat_219391121', value: { min: 5, max: 5 } },
+  { id: 'implicit.stat_979246511', value: { min: 4, max: 4 } }
+])
+const rawFiveFive = rawClaw.replace('Gain 4%', 'Gain 5%')
+assert.notEqual(lookup(makeClaw(rawFiveFive)).key, fourFive.key)
+assert.equal(lookup(makeClaw(rawClaw)).key, fourFive.key)
+assert.notEqual(lookup(exactClaw, createFilters(exactClaw, { ...clawOptions, merchantOnly: false })).key, fourFive.key)
+assert.notEqual(lookup(exactClaw, createFilters(exactClaw, { ...clawOptions, league: 'Standard' })).key, fourFive.key)
+assert.equal(lookup({ ...exactClaw, unknownModifiers: [{ text: 'unknown' }] }), undefined)
+const listing = (id, raw, priceAmount) => ({ id, clipboard: Buffer.from(raw).toString('base64'), priceAmount, priceCurrency: 'chaos' })
+const listings = [listing('wrong', rawFiveFive, 10), listing('right', rawClaw, 21)]
+assert.equal(summarizeExact(fourFive.signature, 2, ['wrong', 'right'], listings).price, '21 chaos')
+assert.equal(summarizeExact(fourFive.signature, 1, ['wrong'], listings).price, undefined)
+assert.equal(summarizeExact(fourFive.signature, 0, [], []).total, 0)
+console.log('Passed exact-roll request, cache keys and verification of listing clipboards.')

@@ -2,7 +2,7 @@
   <div class="pb-3" aria-live="polite">
     <template v-if="price != null && snapshot">
       <strong>{{ price.toLocaleString() }} chaos</strong>
-      <div class="text-sm text-gray-400">poe.ninja variant estimate · checked {{ age }} min ago</div>
+      <div class="text-sm text-gray-400">poe.ninja · all rolls · checked {{ age }} min ago</div>
     </template>
     <span v-else class="text-sm text-gray-400">{{ loading ? 'Loading Viscera estimates…' : 'No matching cached estimate' }}</span>
   </div>

@@ -118,3 +118,30 @@ same data.
 After the Windows launch test, CI creates a single ZIP containing the
 portable executable, extracts it, compares the executable's SHA-256 with
 the tested original, and uploads that ZIP directly.
+
+## Viscera exact-roll asking prices
+
+Check exact rolls submits an on-demand price-sorted trade query with equal
+minimum and maximum values for every supported numeric implicit. The overlay
+shows the rolls used. Existing Check live listings still uses the editable
+filters. The separate poe.ninja estimate now says "all rolls".
+
+Quotes are cached in memory by trade site, realm, league, full tiered name,
+implicit IDs and rolls, and serialized search filters. Reopening a matching
+item displays its previous asking price and check time. The refresh slider
+controls when a manual refresh becomes available. Zero matches are cached.
+Errors remain retryable. Exact lookups do not run in the background.
+
+For a nonempty search, fetch up to ten price-sorted listings. Verify the
+listing clipboard's tier, modifiers and values before using the first
+verified asking price. The count shown is the trade API's search count.
+If no fetched listing verifies, display that limitation. Exact lookup is
+available for recognized PC Viscera with supported single-value numeric
+implicits. Multivalue averages, ambiguous IDs and unrecognized modifiers are
+excluded. Variants with a fixed additional implicit can still be checked.
+
+Added a Covens listing clipboard for a 4% cold / 5% lightning King Crab's
+Claw. Regression tests distinguish 4/5 from 5/5, leagues and seller settings,
+and reject a cheaper listing with the wrong rolls. A live merchant-only
+query returned 45 matches and the first verified 4/5 listing asked 21 chaos
+at development time.
