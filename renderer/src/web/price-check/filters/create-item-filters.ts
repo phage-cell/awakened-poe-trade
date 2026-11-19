@@ -141,6 +141,7 @@ export function createFilters (
   }
   if (item.info.refName === 'Viscera') {
     filters.searchExact = {
+      baseTypeTrade: item.visceraTradeType,
       category: item.category
     }
     return filters

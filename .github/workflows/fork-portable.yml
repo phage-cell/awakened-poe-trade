@@ -1,0 +1,34 @@
+name: Fork Windows portable
+on:
+  push:
+    branches: [dev/poe-3.30]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  portable:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.22.3
+      - run: npm ci
+        working-directory: renderer
+      - run: npm run lint
+        working-directory: renderer
+      - run: npm run build
+        working-directory: renderer
+      - run: node tests/viscera.mjs
+        working-directory: renderer
+      - run: npm ci
+        working-directory: main
+      - run: npm run build
+        working-directory: main
+      - run: npm exec -- electron-builder --win portable --x64 --publish never
+        working-directory: main
+      - uses: actions/upload-artifact@v7
+        with:
+          name: phage-cell-portable-${{ github.sha }}
+          path: main/dist/*.exe
+          if-no-files-found: error

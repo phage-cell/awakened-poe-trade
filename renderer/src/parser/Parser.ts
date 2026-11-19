@@ -15,6 +15,10 @@ import { magicBasetype } from './magic-name'
 import { isModInfoLine, groupLinesByMod, parseModInfoLine, parseModType, ModifierInfo, ParsedModifier, ENCHANT_LINE, SCOURGE_LINE, IMPLICIT_LINE } from './advanced-mod-desc'
 import { calcPropPercentile, QUALITY_STATS } from './calc-q20'
 
+import visceraTypes from './viscera-types.json'
+
+const visceraTradeTypes = new Set(visceraTypes)
+
 type SectionParseResult =
   | 'SECTION_PARSED'
   | 'SECTION_SKIPPED'
@@ -69,6 +73,7 @@ const parsers: Array<ParserFn | { virtual: VirtualParserFn }> = [
   parseScryingOrb,
   parseMercenary,
   parseViscera,
+  { virtual: validateViscera },
   parseLogbookArea,
   parseLogbookArea,
   parseLogbookArea,
@@ -180,7 +185,9 @@ function normalizeName (item: ParserState) {
 
 function findInDatabase (item: ParserState) {
   let info: BaseType[] | undefined
-  if (item.category === ItemCategory.DivinationCard) {
+  if (item.infoVariants?.[0]?.refName === 'Viscera') {
+    info = item.infoVariants
+  } else if (item.category === ItemCategory.DivinationCard) {
     info = ITEM_BY_TRANSLATED('DIVINATION_CARD', item.name)
   } else if (item.category === ItemCategory.CapturedBeast) {
     info = ITEM_BY_TRANSLATED('CAPTURED_BEAST', item.baseType ?? item.name)
@@ -725,6 +732,12 @@ function parseViscera (section: string[], item: ParsedItem) {
   return 'SECTION_SKIPPED'
 }
 
+function validateViscera (item: ParserState) {
+  if (item.info.refName === 'Viscera' && !item.category && !item.visceraTradeType) {
+    return err('item.unknown')
+  }
+}
+
 function parseLogbookArea (section: string[], item: ParsedItem) {
   if (item.info.refName !== 'Expedition Logbook') return 'PARSER_SKIPPED'
   if (section.length < 3) return 'SECTION_SKIPPED'
@@ -835,6 +848,13 @@ function parseModifiers (section: string[], item: ParsedItem) {
   )
 
   if (!recognizedLine) {
+    if (item.info.refName === 'Viscera' && section.some(line => {
+      const candidate = linesToStatStrings([line]).next()
+      return !candidate.done && tryParseTranslation(candidate.value, ModifierType.Implicit, item.category)
+    })) {
+      parseStatsFromMod(section, item, { info: { type: ModifierType.Implicit, tags: [] }, stats: [] })
+      return 'SECTION_PARSED'
+    }
     return 'SECTION_SKIPPED'
   }
 
@@ -1006,7 +1026,9 @@ function parseCategoryByHelpText (section: string[], item: ParserState) {
     item.category = ItemCategory.Voidstone
     return 'SECTION_PARSED'
   } else if (section[0] === _$.VISCERA_HELP) {
-    item.name = 'Viscera'
+    const type = item.name.replace(/^(Lesser|Greater) /, '')
+    item.visceraTradeType = visceraTradeTypes.has(type) ? type : undefined
+    item.infoVariants = [{ name: item.name, refName: 'Viscera', namespace: 'ITEM', icon: '' }]
     return 'SECTION_PARSED'
   }
 
