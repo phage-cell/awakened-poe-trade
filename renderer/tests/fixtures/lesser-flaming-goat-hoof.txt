@@ -1,0 +1,10 @@
+Item Class: Viscera
+Lesser Flaming Goat Hoof
+--------
+Lower Limb
+--------
+Item Level: 47
+--------
+12% increased Fire Damage
+--------
+Take this to the Wickerman in a town or hideout to attach it.

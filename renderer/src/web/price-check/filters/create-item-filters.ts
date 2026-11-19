@@ -141,8 +141,11 @@ export function createFilters (
   }
   if (item.info.refName === 'Viscera') {
     filters.searchExact = {
-      baseTypeTrade: item.visceraTradeType,
+      baseType: item.visceraTradeType,
       category: item.category
+    }
+    if (item.visceraTradeType && item.category) {
+      filters.searchRelaxed = { category: item.category, disabled: true }
     }
     return filters
   }

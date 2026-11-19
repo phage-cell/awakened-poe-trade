@@ -55,3 +55,24 @@ upstream app-builder-lib patch with a version mismatch warning.
 
 Live inventory copying, overlay interaction, listing matches, other 3.30
 item families and localized stat coverage require further verification.
+
+### Trade validation and additional Covens coverage
+
+- Added The Covetous Dark (Eye Gouger) to the English unique catalog.
+  Name and base match GGG's item list. The icon is from
+  https://poedb.tw/us/The_Covetous_Dark. Existing data already contains
+  Hide of the Vendigo, The Sword of Ages, Putrid Seed, Mycelium Core,
+  Cursed Poppet and Fireball of Radiation.
+- Exact Viscera searches show the canonical base on the filter button.
+  Click it to broaden the search to the same body slot.
+- A public Covens search for Flaming Goat Hoof and viscera.leg returned
+  1,345 listings at verification time. Saved the first listing's decoded
+  extended.text as a regression fixture, excluding seller and listing data.
+  Its item level 47, 12% fire damage and implicit.stat_3962278098 agree
+  with GGG's structured listing. Tests also exercise actual request
+  serialization for exact types, relaxed slots and the unique claw.
+- GGG exposes fated and unidentified_tier. A tier-filtered listing's
+  exported clipboard showed only Unidentified. A fated-only search returned
+  no listing. Neither property is inferred from an ordinary unidentified
+  clipboard. Other tier-specific and fated searches remain open.
+- Fork configuration and Electron profile use the phage-cell-poe-trade directory under the OS app-data root, selected before the single-instance lock.
