@@ -29,6 +29,7 @@ import { configProp, configModelValue, _configModelValue, findWidget } from './u
 import { PriceCheckWidget, DelveGridWidget } from '@/web/overlay/interfaces'
 import { ItemCheckWidget } from '../item-check/widget.js'
 
+import { priceCheckHotkeys } from './price-check-hotkeys'
 import UiRadio from '@/web/ui/UiRadio.vue'
 import HotkeysGeneric, { HotkeySchema } from '../settings/HotkeysGeneric.vue'
 
@@ -38,19 +39,7 @@ const hotkeys = computed<HotkeySchema[]>(() => {
   const priceCheckWidget = findWidget<PriceCheckWidget>('price-check', props.config)!
   const itemCheckWidget = findWidget<ItemCheckWidget>('item-check', props.config)!
   const delveGridWidget = findWidget<DelveGridWidget>('delve-grid', props.config)!
-  return [{
-    translationKey: 'price_check.name',
-    items: [{
-      translationKey: 'price_check.hotkey',
-      config: {
-        modKey: _configModelValue(priceCheckWidget, 'hotkeyHold'),
-        nonModKey: _configModelValue(priceCheckWidget, 'hotkey')
-      }
-    }, {
-      translationKey: 'price_check.hotkey_locked',
-      config: _configModelValue(priceCheckWidget, 'hotkeyLocked')
-    }]
-  }, {
+  return [priceCheckHotkeys(priceCheckWidget), {
     translationKey: 'settings.overlay',
     config: _configModelValue(props.config, 'overlayKey'),
     required: true

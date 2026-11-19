@@ -3,7 +3,9 @@
     <filter-name
       :filters="itemFilters"
       :item="item" />
-    <price-prediction v-if="showPredictedPrice" class="mb-4"
+    <viscera-estimate v-if="item.info.refName === 'Viscera'"
+      :item="item" :league="estimateLeague" />
+    <price-prediction v-else-if="showPredictedPrice" class="mb-4"
       :item="item" />
     <price-trend v-else
       :item="item"
@@ -31,7 +33,7 @@
       @reset="resetTradeResults" />
     <div v-if="!doSearch" class="flex justify-between items-center">
       <div class="flex w-40" @mouseenter="handleSearchMouseenter">
-        <button class="btn" @click="doSearch = true" style="min-width: 5rem;">{{ t('Search') }}</button>
+        <button class="btn" @click="doSearch = true" style="min-width: 5rem;">{{ cachedFirst ? 'Check live listings' : t('Search') }}</button>
       </div>
       <trade-links v-if="tradeAPI === 'trade'"
         :get-link="makeTradeLink" />
@@ -60,6 +62,7 @@ import TradeListing from './trade/TradeListing.vue'
 import TradeBulk from './trade/TradeBulk.vue'
 import TradeLinks from './trade/TradeLinks.vue'
 import { apiToSatisfySearch, getTradeEndpoint } from './trade/common'
+import VisceraEstimate from './trends/VisceraEstimate.vue'
 import PriceTrend from './trends/PriceTrend.vue'
 import FiltersBlock from './filters/FiltersBlock.vue'
 import { createPresets } from './filters/create-presets'
@@ -83,6 +86,7 @@ export default defineComponent({
     TradeBulk,
     TradeLinks,
     PriceTrend,
+    VisceraEstimate,
     FiltersBlock,
     FilterName,
     StackValue,
@@ -100,6 +104,7 @@ export default defineComponent({
   },
   setup (props) {
     const widget = computed(() => AppConfig<PriceCheckWidget>('price-check')!)
+    const cachedFirst = computed(() => widget.value.cachedFirst !== false)
     const leagues = useLeagues()
 
     const presets = ref<{ active: string, presets: FilterPreset[] }>(null!)
@@ -129,7 +134,7 @@ export default defineComponent({
         ) ? prevCurrency : widget.value.defaultCurrency
       })
 
-      if ((!props.advancedCheck && !widget.value.smartInitialSearch) ||
+      if (cachedFirst.value || (!props.advancedCheck && !widget.value.smartInitialSearch) ||
           (props.advancedCheck && !widget.value.lockedInitialSearch)) {
         doSearch.value = false
       } else {
@@ -180,7 +185,7 @@ export default defineComponent({
       const cItem = curr[0]; const pItem = prev[0]
       const cTrade = curr[1]; const pTrade = prev[1]
 
-      if (cItem === pItem && cTrade !== pTrade) {
+      if (!cachedFirst.value && cItem === pItem && cTrade !== pTrade) {
         nextTick(() => {
           doSearch.value = true
         })
@@ -188,7 +193,7 @@ export default defineComponent({
     }, { deep: false })
 
     const showPredictedPrice = computed(() => {
-      if (!widget.value.requestPricePrediction ||
+      if (cachedFirst.value || !widget.value.requestPricePrediction ||
           AppConfig().language !== 'en' ||
           !leagues.selected.value!.isPopular) return false
 
@@ -212,7 +217,7 @@ export default defineComponent({
     })
 
     function handleSearchMouseenter (e: MouseEvent) {
-      if ((filtersComponent.value.$el as HTMLElement).contains(e.relatedTarget as HTMLElement)) {
+      if (!cachedFirst.value && (filtersComponent.value.$el as HTMLElement).contains(e.relatedTarget as HTMLElement)) {
         doSearch.value = true
 
         if (document.activeElement instanceof HTMLElement) {
@@ -240,6 +245,8 @@ export default defineComponent({
       t,
       itemFilters,
       itemStats,
+      cachedFirst,
+      estimateLeague: computed(() => leagues.selected.value?.realm === 'pc-ggg' && leagues.selected.value.isPopular ? leagues.selected.value.id : undefined),
       doSearch,
       tradeAPI,
       tradeService,

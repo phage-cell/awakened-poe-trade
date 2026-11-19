@@ -83,3 +83,20 @@ item families and localized stat coverage require further verification.
 - The Windows workflow now starts the actual portable artifact, waits for
   the packaged application's loopback API, checks its reported version
   and checks the dedicated profile before uploading.
+
+## Cached price checks and shortcut settings
+
+The quick and locked price checks now open with cached estimates by default.
+Use **Check live listings** to submit the selected trade filters. Price Check
+settings can restore automatic searches and edit either shortcut using the
+same recorder and stored settings as the Hotkeys page.
+
+Viscera estimates use the public poe.ninja stash overview, by active popular
+PC league. Match the full printed tier name and the complete set of parsed
+implicit trade IDs to a unique overview row. Ambiguous or unmatched variants
+show no estimate. Estimates summarize a variant across numeric rolls. Fetch
+once per league per session, reuse for 30 minutes, share pending downloads,
+and retain the original fetch time after a failed refresh. Other supported
+items use the existing poe.ninja price database with a visible cache age.
+Refreshes share in-flight requests. Live trade results remain available for
+rare gear, private leagues, and custom roll or listing filters.

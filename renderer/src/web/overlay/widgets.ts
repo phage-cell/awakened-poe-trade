@@ -44,6 +44,7 @@ export interface PriceCheckWidget extends Widget {
   showRateLimitState: boolean
   apiLatencySeconds: number
   collapseListings: 'api' | 'app'
+  cachedFirst?: boolean
   smartInitialSearch: boolean
   lockedInitialSearch: boolean
   activateStockFilter: boolean

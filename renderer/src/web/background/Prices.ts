@@ -33,8 +33,9 @@ export const usePoeninja = createGlobalState(() => {
   const xchgRate = shallowRef<number | undefined>(undefined)
 
   const isLoading = shallowRef(false)
-  let PRICES_DB: PriceDatabase = []
-  let lastUpdateTime = 0
+  const prices = shallowRef<PriceDatabase>([])
+  const lastUpdateTime = shallowRef(0)
+  let lastAttempt = 0
   let downloadController: AbortController | undefined
   let lastInterestTime = 0
 
@@ -42,28 +43,38 @@ export const usePoeninja = createGlobalState(() => {
     const league = leagues.selected.value
     if (!league || !league.isPopular || league.realm !== 'pc-ggg') return
 
-    if (!force && (
-      (Date.now() - lastUpdateTime) < UPDATE_INTERVAL_MS ||
+    if (!force && (downloadController || Date.now() - lastAttempt < RETRY_INTERVAL_MS ||
+      (Date.now() - lastUpdateTime.value) < UPDATE_INTERVAL_MS ||
       (Date.now() - lastInterestTime) > INTEREST_SPAN_MS
     )) return
     if (downloadController) downloadController.abort()
 
+    const controller = new AbortController()
+    lastAttempt = Date.now()
     try {
       isLoading.value = true
-      downloadController = new AbortController()
-      const response = await Host.proxy(`poe.ninja/poe1/api/economy/current/dense/overviews?league=${league.id}&language=en`, {
+      downloadController = controller
+      const response = await Host.proxy(`poe.ninja/poe1/api/economy/current/dense/overviews?league=${encodeURIComponent(league.id)}&language=en`, {
         signal: downloadController.signal
       })
       const jsonBlob = await response.text()
 
-      PRICES_DB = splitJsonBlob(jsonBlob)
+      if (!response.ok || controller.signal.aborted) return
+      const loaded = splitJsonBlob(jsonBlob)
+      if (!loaded.length) return
+      prices.value = loaded
       const divine = findPriceByQuery({ ns: 'ITEM', name: 'Divine Orb', variant: undefined })
       if (divine && divine.chaos >= 30) {
         xchgRate.value = divine.chaos
       }
-      lastUpdateTime = Date.now()
+      lastUpdateTime.value = Date.now()
+    } catch {
+      // Keep the previous estimate and its original fetch time when offline.
     } finally {
-      isLoading.value = false
+      if (downloadController === controller) {
+        downloadController = undefined
+        isLoading.value = false
+      }
     }
   }
 
@@ -95,7 +106,7 @@ export const usePoeninja = createGlobalState(() => {
       chaos: 0
     }).replace(':0}', ':')
 
-    for (const { ns, url, lines } of PRICES_DB) {
+    for (const { ns, url, lines } of prices.value) {
       if (ns !== query.ns) continue
 
       const startPos = lines.indexOf(searchString)
@@ -137,18 +148,22 @@ export const usePoeninja = createGlobalState(() => {
     load()
   }, RETRY_INTERVAL_MS)
 
-  watch(leagues.selectedId, () => {
+  watch([leagues.selectedId, () => leagues.selected.value?.realm], () => {
+    downloadController?.abort()
+    lastUpdateTime.value = 0
+    lastAttempt = 0
     xchgRate.value = undefined
-    PRICES_DB = []
+    prices.value = []
     load(true)
   })
 
   return {
+    fetchedAt: readonly(lastUpdateTime),
     xchgRate: readonly(xchgRate),
     findPriceByQuery,
     autoCurrency,
     queuePricesFetch,
-    initialLoading: () => isLoading.value && !PRICES_DB.length
+    initialLoading: () => isLoading.value && !prices.value.length
   }
 })
 

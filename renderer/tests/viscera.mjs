@@ -9,7 +9,7 @@ globalThis.fetch = async url => new Response(await readFile(new URL(url)))
 const bundle = await build({
   absWorkingDir: fileURLToPath(root),
   stdin: {
-    contents: "export { parseClipboard } from './src/parser/Parser'; export { loadForLang } from './src/assets/data'; export { createFilters } from './src/web/price-check/filters/create-item-filters'; export { createTradeRequest } from './src/web/price-check/trade/pathofexile-trade'",
+    contents: "export { visceraEstimate, overviewCache } from './src/web/price-check/trends/viscera-estimate'; export { priceCheckHotkeys } from './src/web/settings/price-check-hotkeys'; export { parseClipboard } from './src/parser/Parser'; export { loadForLang } from './src/assets/data'; export { createFilters } from './src/web/price-check/filters/create-item-filters'; export { createTradeRequest } from './src/web/price-check/trade/pathofexile-trade'",
     resolveDir: fileURLToPath(root)
   },
   bundle: true, platform: 'node', format: 'esm', write: false,
@@ -25,7 +25,7 @@ const bundle = await build({
   }],
   define: { 'import.meta.env.BASE_URL': JSON.stringify(publicURL.href) }
 })
-const { parseClipboard, loadForLang, createFilters, createTradeRequest } = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].contents).toString('base64'))
+const { visceraEstimate, overviewCache, priceCheckHotkeys, parseClipboard, loadForLang, createFilters, createTradeRequest } = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].contents).toString('base64'))
 await loadForLang('en')
 const help = 'Take this to the Wickerman in a town or hideout to attach it.'
 function clipboard (name, slot) {
@@ -90,3 +90,37 @@ for (const [slot, type, id] of [
   assert.ok(item.newMods.some(mod => mod.stats.some(s => s.stat.trade.ids.implicit?.includes(id))))
 }
 console.log('Passed additional live head, arm and torso clipboard fixtures.')
+
+const row = { name: 'Lesser Flaming Goat Hoof', chaosValue: 2, tradeInfo: [{ mod: 'implicit.stat_3962278098' }] }
+assert.equal(visceraEstimate(hoof.value, [row, { ...row, name: 'Flaming Goat Hoof', chaosValue: 20 }]), 2)
+assert.equal(visceraEstimate(hoof.value, [{ ...row, name: 'Flaming Goat Hoof' }]), undefined)
+assert.equal(visceraEstimate(hoof.value, [{ ...row, tradeInfo: [] }]), undefined)
+assert.equal(visceraEstimate(hoof.value, [row, row]), undefined)
+let time = 0
+let calls = 0
+let offline = false
+const cached = overviewCache(async () => {
+  calls++
+  if (offline) throw Error('offline')
+  return [row]
+}, () => time)
+const [first, same] = await Promise.all([cached('Covens'), cached('Covens')])
+assert.equal(calls, 1)
+assert.equal(first, same)
+await cached('Standard')
+assert.equal(calls, 2)
+time += 31 * 60_000
+offline = true
+assert.equal(await cached('Covens'), first)
+assert.equal(await cached('Covens'), first)
+assert.equal(calls, 3)
+offline = false
+time += 5 * 60_000
+assert.equal((await cached('Covens')).fetchedAt, time)
+const config = { hotkeyHold: 'Ctrl', hotkey: 'D', hotkeyLocked: 'Ctrl + Alt + D' }
+const keys = priceCheckHotkeys(config).items
+keys[0].config.nonModKey.value = 'F'
+keys[1].config.value = 'F7'
+assert.equal(config.hotkey, 'F')
+assert.equal(config.hotkeyLocked, 'F7')
+console.log('Passed tier and variant matching, cache reuse, league isolation, retry and hotkey settings.')

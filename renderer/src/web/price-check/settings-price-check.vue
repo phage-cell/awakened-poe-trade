@@ -1,5 +1,7 @@
 <template>
   <div class="max-w-md p-2">
+    <hotkeys-generic class="mb-3" :hotkeys="priceHotkeys" />
+    <ui-checkbox class="mb-4" v-model="cachedFirst">Show cached estimates first and search live listings on demand</ui-checkbox>
     <div class="mb-2" v-if="!leagues.error.value">
       <div class="flex-1 mb-1">{{ t('league') }}
         <button class="btn" @click="leagues.load()" :disabled="leagues.isLoading.value">{{ t('Refresh') }}</button>
@@ -69,7 +71,7 @@
       <div class="bg-gray-700 p-2 mb-2">{{ t(':warn_expensive') }}</div>
       <ui-checkbox class="mb-4 mx-2" :values="['app', 'api']"
         v-model="collapseListings">{{ t(':accurate_collapsed') }}</ui-checkbox>
-      <div class="mb-2 mx-2">
+      <div v-if="!cachedFirst" class="mb-2 mx-2">
         <div class="flex-1 mb-1">{{ t(':auto_search') }}</div>
         <div class="mb-4 flex">
           <ui-toggle v-if="hotkeyQuick"
@@ -102,6 +104,8 @@ import UiRadio from '@/web/ui/UiRadio.vue'
 import UiCheckbox from '@/web/ui/UiCheckbox.vue'
 import UiToggle from '@/web/ui/UiToggle.vue'
 import UiErrorBox from '@/web/ui/UiErrorBox.vue'
+import HotkeysGeneric from '../settings/HotkeysGeneric.vue'
+import { priceCheckHotkeys } from '../settings/price-check-hotkeys'
 import OnlineFilterCore from './trade/OnlineFilterCore.vue'
 import { ItemFilters } from './filters/interfaces.js'
 import { configModelValue, configProp, findWidget } from '../settings/utils.js'
@@ -110,7 +114,7 @@ import { useLeagues } from '../background/Leagues'
 
 export default defineComponent({
   name: 'price_check.name',
-  components: { UiRadio, UiCheckbox, UiToggle, UiErrorBox, OnlineFilterCore },
+  components: { UiRadio, UiCheckbox, UiToggle, UiErrorBox, HotkeysGeneric, OnlineFilterCore },
   props: configProp(),
   setup (props) {
     const configWidget = computed(() => findWidget<PriceCheckWidget>('price-check', props.config)!)
@@ -120,6 +124,8 @@ export default defineComponent({
 
     return {
       t,
+      priceHotkeys: computed(() => [priceCheckHotkeys(configWidget.value)]),
+      cachedFirst: computed({ get: () => configWidget.value.cachedFirst !== false, set: (v: boolean) => { configWidget.value.cachedFirst = v } }),
       leagueId: configModelValue(() => props.config, 'leagueId'),
       customLeagueId: computed<string>({
         get: () => !leagues.list.value.some(league => league.id === props.config.leagueId)
